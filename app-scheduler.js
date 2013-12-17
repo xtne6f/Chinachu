@@ -411,6 +411,9 @@ function getEpg() {
 	var c = [];
 	var r = [];
 	
+	// 待機状態(起動しているが録画していない)のチューナーのリスト
+	var idleTuners = [];
+	
 	var writeOut = function (callback) {
 		
 		schedule = s;
@@ -799,8 +802,22 @@ function getEpg() {
 			
 			readStream.pipe(writeStream);
 		} else {
+			var tuner = null;
+			var idleReuse = false;
+			
+			// 待機状態のチューナーがあれば使う
+			for (j = 0; idleTuners.length > j; j++) {
+				if (idleTuners[j].types.indexOf(channel.type) !== -1) {
+					tuner = idleTuners.splice(j, 1)[0];
+					idleReuse = true;
+					break;
+				}
+			}
+			
 			// チューナーを選ぶ
-			var tuner = chinachu.getFreeTunerSync(config.tuners, channel.type);
+			if (tuner === null) {
+				tuner = chinachu.getFreeTunerSync(config.tuners, channel.type);
+			}
 			
 			// チューナーが見つからない
 			if (tuner === null) {
@@ -812,7 +829,9 @@ function getEpg() {
 			
 			// チューナーをロック
 			try {
-				chinachu.lockTunerSync(tuner);
+				if (!idleReuse) {
+					chinachu.lockTunerSync(tuner);
+				}
 			} catch (e) {
 				util.log('WARNING: チューナー(' + tuner.n + ')のロックに失敗しました');
 				process.nextTick(retry);
@@ -837,12 +856,20 @@ function getEpg() {
 			// recpt1用
 			recCmd = recCmd.replace(' --b25', '').replace(' --strip', '').replace('<sid>', 'epg');
 			
-			// 録画プロセスを生成
-			var recProc = child_process.spawn(recCmd.split(' ')[0], recCmd.replace(/[^ ]+ /, '').split(' '));
-			util.log('SPAWN: ' + recCmd + ' (pid=' + recProc.pid + ')');
+			var recProc = null;
 			
-			// プロセスタイムアウト
-			setTimeout(function () { recProc.kill('SIGTERM'); }, 1000 * (config.schedulerEpgRecordTime || 60));
+			if (idleReuse) {
+				var channelCmd = tuner.stdinChannel.replace('<channel>', channel.channel);
+				
+				// 録画プロセスをチャンネル変更して再使用
+				recProc = tuner.idleRecProc;
+				recProc.stdin.write(channelCmd + '\n');
+				util.log('CHANNEL_CHANGE: ' + channelCmd + ' (pid=' + recProc.pid + ')');
+			} else {
+				// 録画プロセスを生成
+				recProc = child_process.spawn(recCmd.split(' ')[0], recCmd.replace(/[^ ]+ /, '').split(' '));
+				util.log('SPAWN: ' + recCmd + ' (pid=' + recProc.pid + ')');
+			}
 			
 			// 一時ファイルへの書き込みストリームを作成
 			var recFile = fs.createWriteStream(recPath);
@@ -884,11 +911,17 @@ function getEpg() {
 			var onCancel = function () {
 				
 				// シグナルリスナー解除
-				removeSignalListener();
+				removeSignalListener(onCancel);
 				
 				// 録画プロセスを終了
 				recProc.removeAllListeners('exit');
-				recProc.kill('SIGTERM');
+				if (process.platform === 'win32') {
+					// win32でのkill('SIGTERM')の実装はいまのところ即死(TerminateProcess)なので
+					// gracefulに終了するにはこのぐらいしか手がない
+					recProc.stdout.end();
+				} else {
+					recProc.kill('SIGTERM');
+				}
 				
 				// 書き込みストリームを閉じる
 				recFile.end();
@@ -904,23 +937,94 @@ function getEpg() {
 				process.nextTick(process.exit);
 			};
 			
-			removeSignalListener = function () {
+			removeSignalListener = function (func) {
 				
-				process.removeListener('SIGINT', onCancel);
-				process.removeListener('SIGQUIT', onCancel);
-				process.removeListener('SIGTERM', onCancel);
+				process.removeListener('SIGINT', func);
+				process.removeListener('SIGQUIT', func);
+				process.removeListener('SIGTERM', func);
 			};
+			
+			if (idleReuse === true) {
+				// 待機状態用のリスナー解除
+				recProc.removeAllListeners('exit');
+				removeSignalListener(tuner.idleOnCancel);
+			}
 			
 			// 終了シグナル時処理
 			process.on('SIGINT', onCancel);
 			process.on('SIGQUIT', onCancel);
 			process.on('SIGTERM', onCancel);
 			
+			// プロセスタイムアウト
+			setTimeout(function () {
+				
+				// チャンネル変更できないならプロセス終了
+				if (!tuner.stdinChannel) {
+					if (process.platform === 'win32') {
+						recProc.stdout.end();
+					} else {
+						recProc.kill('SIGTERM');
+					}
+					return;
+				}
+				
+				// 書き込みストリームを閉じる
+				recProc.stdout.removeAllListeners('data');
+				recProc.stderr.removeAllListeners('data');
+				recFile.end();
+				
+				var idleOnCancel = function () {
+					
+					// 録画プロセスを終了
+					recProc.removeAllListeners('exit');
+					if (process.platform === 'win32') {
+						recProc.stdout.end();
+					} else {
+						recProc.kill('SIGTERM');
+					}
+					
+					idleOnExit();
+					
+					// 終了
+					process.nextTick(process.exit);
+				}
+				
+				var idleOnExit = function () {
+					
+					// シグナルリスナー解除
+					removeSignalListener(idleOnCancel);
+					
+					// チューナーのロックを解除
+					unlockTuner();
+					
+					// 待機リストから抹消
+					idleTuners.splice(idleTuners.indexOf(tuner), 1);
+				}
+				
+				// 終了シグナル時処理
+				removeSignalListener(onCancel);
+				process.on('SIGINT', idleOnCancel);
+				process.on('SIGQUIT', idleOnCancel);
+				process.on('SIGTERM', idleOnCancel);
+				
+				// プロセス終了時
+				recProc.removeAllListeners('exit');
+				recProc.on('exit', idleOnExit);
+				
+				dumpEpg();
+				
+				// 録画プロセスを待機状態に移す
+				tuner.idleOnCancel = idleOnCancel;
+				tuner.idleRecProc = recProc;
+				idleTuners.push(tuner);
+				
+			}, 1000 * (config.schedulerEpgRecordTime || 60));
+			
 			// プロセス終了時
 			recProc.on('exit', function (code) {
 				
 				// シグナルリスナー解除
-				removeSignalListener();
+				removeSignalListener(onCancel);
 				
 				// 書き込みストリームを閉じる
 				recFile.end();
@@ -966,6 +1070,15 @@ function getEpg() {
 			
 			writeOut(scheduler);
 			
+			// 待機状態のチューナーを回収
+			idleTuners.forEach(function (tuner) {
+				if (process.platform === 'win32') {
+					tuner.idleRecProc.stdout.end();
+				} else {
+					tuner.idleRecProc.kill('SIGTERM');
+				}
+			});
+			
 			return;
 		}
 		
@@ -980,7 +1093,15 @@ function getEpg() {
 		for (i = 0, l = chs.length; i < l; i++) {
 			ch = chs[i];
 			
-			if (!opts.get('ch') && !opts.get('l') && chinachu.getFreeTunerSync(config.tuners, ch.type) === null) {
+			var idleFound = false;
+			for (j = 0; idleTuners.length > j; j++) {
+				if (idleTuners[j].types.indexOf(ch.type) !== -1) {
+					idleFound = true;
+					break;
+				}
+			}
+			
+			if (!opts.get('ch') && !opts.get('l') && !idleFound && chinachu.getFreeTunerSync(config.tuners, ch.type) === null) {
 				continue;
 			}
 			
