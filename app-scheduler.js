@@ -848,8 +848,28 @@ function getEpg() {
 			var recFile = fs.createWriteStream(recPath);
 			util.log('STREAM: ' + recPath);
 			
+			// 生成直後のストリームは不安定な場合があるので読み飛ばす
+			var dataIgnoreLength = 1024 * 1024;
+			
 			// ts出力
 			recProc.stdout.on('data', function (data) {
+				if (dataIgnoreLength > 0) {
+					dataIgnoreLength -= data.length;
+					if (dataIgnoreLength > 0) {
+						return;
+					}
+					
+					// できるだけ同期しておく
+					var j, k;
+					for (j = 0; 208 > j && data.length > j + 208 * 2; j++) {
+						for (k = 188; data[j] === 0x47 && k <= 208; k += 4) {
+							if (data[j + k] == 0x47 && data[j + k * 2] == 0x47) {
+								recFile.write(data.slice(j));
+								return;
+							}
+						}
+					}
+				}
 				recFile.write(data);
 			});
 			
