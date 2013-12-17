@@ -875,7 +875,7 @@ function getEpg() {
 			
 			// ログ出力
 			recProc.stderr.on('data', function (data) {
-				util.log('#' + (recCmd.split(' ')[0] + ': ' + data).replace(/\n/g, ' ').trim());
+				util.log('#' + (recCmd.split(' ')[0] + ': ' + data).replace(/\r?\n/g, ' ').trim());
 			});
 			
 			var removeSignalListener;
