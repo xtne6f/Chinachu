@@ -11,7 +11,12 @@
 			return;
 		
 		case 'DELETE':
-			child_process.exec('kill -TERM ' + program.pid, function(err, stdout, stderr) {
+			if (process_platform === 'win32') {
+				var killCmd = 'taskkill /pid ' + program.pid;
+			} else {
+				var killCmd = 'kill -TERM ' + program.pid;
+			}
+			child_process.exec(killCmd, function(err, stdout, stderr) {
 				if (err) return response.error(500);
 				
 				response.head(200);

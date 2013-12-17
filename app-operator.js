@@ -430,7 +430,11 @@ function recordingChecker(program, i) {
 	
 	util.log('FINISH: ' + dateFormat(new Date(program.start), 'isoDateTime') + ' [' + program.channel.name + '] ' + program.title);
 	
-	process.kill(program.pid, 'SIGTERM');
+	if (process.platform === 'win32') {
+		child_process.exec('taskkill /pid ' + program.pid);
+	} else {
+		process.kill(program.pid, 'SIGTERM');
+	}
 }
 
 // ファイル更新監視: ./data/reserves.json

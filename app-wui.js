@@ -827,7 +827,12 @@ function processChecker() {
 			
 			pid = pid.toString().trim();
 			
-			child_process.exec('ps h -p ' + pid + ' -o %cpu,rss', function (err, stdout) {
+			if (process.platform === 'win32') {
+				var psCmd = 'tasklist /nh /fi "pid eq ' + pid + '" | find "' + pid + '"';
+			} else {
+				var psCmd = 'ps h -p ' + pid + ' -o %cpu,rss';
+			}
+			child_process.exec(psCmd, function (err, stdout) {
 				
 				if (stdout === '') {
 					status.operator.alive = false;
@@ -856,7 +861,12 @@ function processChecker() {
 			
 			pid = pid.toString().trim();
 			
-			child_process.exec('ps h -p ' + pid + ' -o %cpu,rss', function (err, stdout) {
+			if (process.platform === 'win32') {
+				var psCmd = 'tasklist /nh /fi "pid eq ' + pid + '" | find "' + pid + '"';
+			} else {
+				var psCmd = 'ps h -p ' + pid + ' -o %cpu,rss';
+			}
+			child_process.exec(psCmd, function (err, stdout) {
 				
 				if (stdout === '') {
 					status.wui.alive = false;
