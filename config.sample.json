@@ -1,6 +1,8 @@
 {
   "recordedDir" : "./recorded/",
   "temporaryDir": "/tmp/",
+  "runtimeDir"  : "/var/run/",
+  "makePidfile" : false,
   
   "wuiUsers": [
     "akari:bakuhatsu"

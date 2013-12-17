@@ -51,6 +51,14 @@ var recording = [];
 // 設定の読み込み
 var config = require(CONFIG_FILE);
 
+// PIDファイルを作成
+if (config.makePidfile) {
+	fs.writeFileSync(config.runtimeDir + 'chinachu-operator.pid', '' + process.pid);
+	process.on('exit', function () {
+		fs.unlinkSync(config.runtimeDir + 'chinachu-operator.pid');
+	});
+}
+
 // 録画中リストをクリア
 fs.writeFileSync(RECORDING_DATA_FILE, '[]');
 

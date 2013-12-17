@@ -60,6 +60,14 @@ var emptyFunction = function () {};
 // 設定の読み込み
 var config = require(CONFIG_FILE);
 
+// PIDファイルを作成
+if (config.makePidfile) {
+	fs.writeFileSync(config.runtimeDir + 'chinachu-wui.pid', '' + process.pid);
+	process.on('exit', function () {
+		fs.unlinkSync(config.runtimeDir + 'chinachu-wui.pid');
+	});
+}
+
 // https or http
 if (config.wuiTlsKeyPath && config.wuiTlsCertPath) {
 	var spdy = require('spdy');
@@ -811,8 +819,8 @@ function processChecker() {
 	
 	var c = chinachu.createCountdown(2, chinachu.createTimeout(processChecker, 5000));
 	
-	if (fs.existsSync('/var/run/chinachu-operator.pid') === true) {
-		fs.readFile('/var/run/chinachu-operator.pid', function (err, pid) {
+	if (fs.existsSync(config.runtimeDir + 'chinachu-operator.pid') === true) {
+		fs.readFile(config.runtimeDir + 'chinachu-operator.pid', function (err, pid) {
 			
 			if (err) { return c.tick(); }
 			
@@ -840,8 +848,8 @@ function processChecker() {
 		c.tick();
 	}
 	
-	if (fs.existsSync('/var/run/chinachu-wui.pid') === true) {
-		fs.readFile('/var/run/chinachu-wui.pid', function (err, pid) {
+	if (fs.existsSync(config.runtimeDir + 'chinachu-wui.pid') === true) {
+		fs.readFile(config.runtimeDir + 'chinachu-wui.pid', function (err, pid) {
 			
 			if (err) { return c.tick(); }
 			
