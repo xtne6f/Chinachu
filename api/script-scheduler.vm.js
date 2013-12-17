@@ -6,7 +6,7 @@
 			return;
 		
 		case 'PUT':
-			child_process.exec('./chinachu update', function(err, stdout, stderr) {
+			child_process.exec('"./chinachu" update', function(err, stdout, stderr) {
 				if (err) return response.error(500);
 				
 				res();
