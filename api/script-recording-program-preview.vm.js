@@ -10,7 +10,12 @@
 	
 	if (program.tuner && program.tuner.isScrambling) return response.error(409);
 	
-	if (!fs.existsSync(program.recorded)) return response.error(410);
+	try {
+		var fstats = fs.statSync(program.recorded);
+	} catch (e) {
+		return response.error(410);
+	}
+	if (!fstats.isFile() || fstats.size <= 0) return response.error(410);
 	
 	response.head(200);
 	
@@ -30,9 +35,10 @@
 	if (request.type === 'png') { vcodec = 'png'; }
 	if (request.type === 'txt') { vcodec = 'mjpeg'; }
 	
+	var fread = fs.createReadStream(program.recorded, { start: Math.max(fstats.size - 3200000, 0), end: fstats.size - 1 });
+	
 	var ffmpeg = child_process.exec(
 		(
-			'tail -c 3200000 "' + program.recorded + '" | ' +
 			'avconv -f mpegts -r 10 -i pipe:0 -ss 1.5 -r 10 -frames:v 1 -f image2 -codec:v ' + vcodec +
 			' -an -s ' + width + 'x' + height + ' -map 0:0 -y pipe:1'
 		)
@@ -60,6 +66,9 @@
 			clearTimeout(timeout);
 		}
 	);
+	
+	ffmpeg.stdin.on('error', function() {});
+	fread.pipe(ffmpeg.stdin);
 	
 	var timeout = setTimeout(function() {
 		ffmpeg.kill('SIGKILL');
