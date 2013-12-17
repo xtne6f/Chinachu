@@ -488,6 +488,7 @@ function httpServerMain(req, res, query) {
 				zlib         : zlib,
 				chinachu     : chinachu,
 				config       : config,
+				process_platform: process.platform,
 				define: {
 					CONFIG_FILE        : CONFIG_FILE,
 					RULES_FILE         : RULES_FILE,
