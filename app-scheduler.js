@@ -277,10 +277,9 @@ function convertPrograms(p, ch) {
 			.replace(/【.{1,2}】/g, '')
 			.replace(/\[.\]/g, '')
 			.replace(/([^場版])「.+」/g, '$1')
-			.replace(/(#[0-9]+|(＃|♯)[０１２３４５６７８９]+)/g, '')
+			.replace(/(#|＃|♯)[0-9０１２３４５６７８９]+/g, '')
 			.replace(/第([0-9]+|[０１２３４５６７８９零一壱二弐三参四五伍六七八九十拾]+)話/g, '')
 			.replace(/([0-9]+|[０１２３４５６７８９]+)品目/g, '')
-			.replace(/喪([0-9]+|[０１２３４５６７８９]+)/g, '')
 			.trim();
 		
 		var desc = c.desc[0]._ || '';
@@ -304,7 +303,7 @@ function convertPrograms(p, ch) {
 		if (flags.indexOf('新') !== -1) {
 			episodeNumber = 1;
 		} else {
-			var episodeNumberMatch = (c.title[0]._ + desc).match(/(#[0-9]+|(＃|♯)[０１２３４５６７８９]+|第([0-9]+|[０１２３４５６７８９零一二三四五六七八九十]+)話)|([0-9]+|[０１２３４５６７８９]+)品目|喪([0-9]+|[０１２３４５６７８９]+)|Episode ?[IⅡⅢⅣⅤⅥⅦⅧⅨⅩⅪⅫVX]+/);
+			var episodeNumberMatch = (c.title[0]._ + desc).match(/((#|＃|♯)[0-9０１２３４５６７８９]+|第([0-9]+|[０１２３４５６７８９零一二三四五六七八九十]+)話)|([0-9]+|[０１２３４５６７８９]+)品目|Episode ?[IⅡⅢⅣⅤⅥⅦⅧⅨⅩⅪⅫVX]+/);
 			if (episodeNumberMatch !== null) {
 				var episodeNumberString = episodeNumberMatch[0];
 				
@@ -419,7 +418,11 @@ function getEpg() {
 		schedule = s;
 		
 		schedule.sort(function (a, b) {
-			return a.n - b.n;
+			if (a.n === b.n) {
+				return a.sid - b.sid;
+			} else {
+				return a.n - b.n;
+			}
 		});
 		
 		if (!opts.get('s')) {
@@ -462,18 +465,18 @@ function getEpg() {
 				
 				// おわり
 				process.nextTick(callback);
-				util.log('-- (give up)');
+				util.log('[' + i + '] -- (give up)');
 				
 				return;
 			}
 			
 			setTimeout(get, 3000, i, residue, callback);
-			util.log('-- (retrying, residue=' + residue + ')');
+			util.log('[' + i + '] -- (retrying, residue=' + residue + ')');
 		};
 		
 		var channel = channels[i];
 		
-		util.log(JSON.stringify(channel));
+		util.log('[' + i + '] ' + JSON.stringify(channel));
 		
 		// チェック
 		switch (channel.type) {
@@ -486,7 +489,7 @@ function getEpg() {
 				if (s[j].channel === channel.channel) {
 					// 取得済み
 					process.nextTick(callback);
-					util.log('-- (pass)');
+					util.log('[' + i + '] -- (pass)');
 					
 					return;
 				}
@@ -500,7 +503,7 @@ function getEpg() {
 				if ((s[j].channel === channel.channel) && (s[j].sid === channel.sid)) {
 					// 取得済み
 					process.nextTick(callback);
-					util.log('-- (pass)');
+					util.log('[' + i + '] -- (pass)');
 					
 					return;
 				}
@@ -512,7 +515,7 @@ function getEpg() {
 			// todo
 			// 知らないタイプ
 			process.nextTick(callback);
-			util.log('-- (unknown)');
+			util.log('[' + i + '] -- (unknown)');
 			
 			return;
 		}//<-- switch
@@ -558,7 +561,7 @@ function getEpg() {
 				util.log('UNLINK: ' + recPath);
 				
 				if (err !== null) {
-					util.log('EPG: 不明なエラー');
+					util.log('[' + i + '] EPG: 不明なエラー');
 					util.log(err);
 					process.nextTick(retry);
 					
@@ -570,7 +573,7 @@ function getEpg() {
 					xmlParser.parseString(stdout, function (err, result) {
 						
 						if (err) {
-							util.log('EPG: パースに失敗');
+							util.log('[' + i + '] EPG: パースに失敗');
 							util.log(err);
 							process.nextTick(retry);
 							
@@ -578,21 +581,21 @@ function getEpg() {
 						}
 						
 						if (result === null) {
-							util.log('EPG: パースに失敗 (result=null)');
+							util.log('[' + i + '] EPG: パースに失敗 (result=null)');
 							process.nextTick(retry);
 							
 							return;
 						}
 
 						if (result.tv.channel === undefined) {
-							util.log('EPG: データが空 (result.tv.channel is undefined)');
+							util.log('[' + i + '] EPG: データが空 (result.tv.channel is undefined)');
 							process.nextTick(retry);
 
 							return;
 						}
 						
 						if (!result.tv.channel[0]['display-name'] || !result.tv.channel[0]['display-name'][0] || !result.tv.channel[0]['display-name'][0]._) {
-							util.log('EPG: データが不正 (display-name is incorrect)');
+							util.log('[' + i + '] EPG: データが不正 (display-name is incorrect)');
 							process.nextTick(retry);
 							
 							return;
@@ -613,9 +616,24 @@ function getEpg() {
 								
 								ch.programs = convertPrograms(result.tv.programme, JSON.parse(JSON.stringify(ch)));
 								
-								s.push(ch);
+								s.forEach(function (c) {
+									c.programs.forEach(function (p) {
+										var j;
+										for (j = 0; j < ch.programs.length; j++) {
+											if (c.n === ch.n) {
+												if (p.id.split('-')[1] === ch.programs[j].id.split('-')[1]) {
+													ch.programs.splice(j, 1);
+												}
+											}
+										}
+									});
+								});
 								
-								util.log('CHANNEL: ' + ch.type + '-' + ch.channel + ' ... ' + ch.id + ' (sid=' + ch.sid + ') ' + '(programs=' + ch.programs.length.toString(10) + ')' + ' - ' + ch.name);
+								if (ch.programs.length !== 0) {
+									s.push(ch);
+								}
+								
+								util.log('[' + i + '] ' + 'CHANNEL: ' + ch.type + '-' + ch.channel + ' ... ' + ch.id + ' (sid=' + ch.sid + ') ' + '(programs=' + ch.programs.length.toString(10) + ')' + ' - ' + ch.name);
 							});
 							
 							break;
@@ -655,7 +673,7 @@ function getEpg() {
 								
 								s.push(ch);
 								
-								util.log('CHANNEL: ' + ch.type + '-' + ch.channel + ' ... ' + ch.id + ' (sid=' + ch.sid + ') ' + '(programs=' + ch.programs.length.toString(10) + ')' + ' - ' + ch.name);
+								util.log('[' + i + '] ' + 'CHANNEL: ' + ch.type + '-' + ch.channel + ' ... ' + ch.id + ' (sid=' + ch.sid + ') ' + '(programs=' + ch.programs.length.toString(10) + ')' + ' - ' + ch.name);
 							});
 							
 							break;
@@ -695,7 +713,7 @@ function getEpg() {
 								
 								s.push(ch);
 								
-								util.log('CHANNEL: ' + ch.type + '-' + ch.channel + ' ... ' + ch.id + ' (sid=' + ch.sid + ') ' + '(programs=' + ch.programs.length.toString(10) + ')' + ' - ' + ch.name);
+								util.log('[' + i + '] ' + 'CHANNEL: ' + ch.type + '-' + ch.channel + ' ... ' + ch.id + ' (sid=' + ch.sid + ') ' + '(programs=' + ch.programs.length.toString(10) + ')' + ' - ' + ch.name);
 							});
 							
 							break;
@@ -735,7 +753,7 @@ function getEpg() {
 								
 								s.push(ch);
 								
-								util.log('CHANNEL: ' + ch.type + '-' + ch.channel + ' ... ' + ch.id + ' (sid=' + ch.sid + ') ' + '(programs=' + ch.programs.length.toString(10) + ')' + ' - ' + ch.name);
+								util.log('[' + i + '] ' + 'CHANNEL: ' + ch.type + '-' + ch.channel + ' ... ' + ch.id + ' (sid=' + ch.sid + ') ' + '(programs=' + ch.programs.length.toString(10) + ')' + ' - ' + ch.name);
 							});
 							
 							break;
@@ -746,14 +764,14 @@ function getEpg() {
 						}//<-- switch
 						
 						setTimeout(callback, 3000);
-						util.log('-- (ok)');
+						util.log('[' + i + '] -- (ok)');
 					});
 				} catch (e) {
-					util.log('EPG: エラー (' + e + ')');
+					util.log('[' + i + '] EPG: エラー (' + e + ')');
 					process.nextTick(retry);
 				}
 			});
-			util.log('EXEC: epgdump (pid=' + epgdumpProc.pid + ')');
+			util.log('[' + i + '] EXEC: epgdump (pid=' + epgdumpProc.pid + ')');
 		};//<-- dumpEpg
 		
 		if (opts.get('ch') && opts.get('l')) {
@@ -764,7 +782,7 @@ function getEpg() {
 					copied = true;
 					
 					if (err) {
-						util.log('ERROR: 一時ファイルの作成に失敗しました');
+						util.log('[' + i + '] ERROR: 一時ファイルの作成に失敗しました');
 						process.nextTick(retry);
 						
 						return;
@@ -776,7 +794,7 @@ function getEpg() {
 			
 			var load  = opts.get('l');
 			if (!fs.existsSync(load)) {
-				util.log('WARNING: 指定したファイルが見つかりません');
+				util.log('[' + i + '] WARNING: 指定したファイルが見つかりません');
 				process.nextTick(retry);
 				
 				return;
@@ -821,7 +839,7 @@ function getEpg() {
 			
 			// チューナーが見つからない
 			if (tuner === null) {
-				util.log('WARNING: 利用可能なチューナーが見つかりませんでした (存在しないかロックされています)');
+				util.log('[' + i + '] WARNING: 利用可能なチューナーが見つかりませんでした (存在しないかロックされています)');
 				process.nextTick(retry);
 				
 				return;
@@ -833,19 +851,19 @@ function getEpg() {
 					chinachu.lockTunerSync(tuner);
 				}
 			} catch (e) {
-				util.log('WARNING: チューナー(' + tuner.n + ')のロックに失敗しました');
+				util.log('[' + i + '] WARNING: チューナー(' + tuner.n + ')のロックに失敗しました');
 				process.nextTick(retry);
 				
 				return;
 			}
-			util.log('LOCK: ' + tuner.name + ' (n=' + tuner.n + ')');
+			util.log('[' + i + '] LOCK: ' + tuner.name + ' (n=' + tuner.n + ')');
 			
 			var unlockTuner = function _unlockTuner() {
 				
 				// チューナーのロックを解除
 				try {
 					chinachu.unlockTunerSync(tuner);
-					util.log('UNLOCK: ' + tuner.name + ' (n=' + tuner.n + ')');
+					util.log('[' + i + '] UNLOCK: ' + tuner.name + ' (n=' + tuner.n + ')');
 				} catch (e) {
 					util.log(e);
 				}
@@ -864,16 +882,16 @@ function getEpg() {
 				// 録画プロセスをチャンネル変更して再使用
 				recProc = tuner.idleRecProc;
 				recProc.stdin.write(channelCmd + '\n');
-				util.log('CHANNEL_CHANGE: ' + channelCmd + ' (pid=' + recProc.pid + ')');
+				util.log('[' + i + '] CHANNEL_CHANGE: ' + channelCmd + ' (pid=' + recProc.pid + ')');
 			} else {
 				// 録画プロセスを生成
 				recProc = child_process.spawn(recCmd.split(' ')[0], recCmd.replace(/[^ ]+ /, '').split(' '));
-				util.log('SPAWN: ' + recCmd + ' (pid=' + recProc.pid + ')');
+				util.log('[' + i + '] SPAWN: ' + recCmd + ' (pid=' + recProc.pid + ')');
 			}
 			
 			// 一時ファイルへの書き込みストリームを作成
 			var recFile = fs.createWriteStream(recPath);
-			util.log('STREAM: ' + recPath);
+			util.log('[' + i + '] STREAM: ' + recPath);
 			
 			// 生成直後のストリームは不安定な場合があるので読み飛ばす
 			var dataIgnoreLength = 1024 * 1024;
@@ -902,7 +920,7 @@ function getEpg() {
 			
 			// ログ出力
 			recProc.stderr.on('data', function (data) {
-				util.log('#' + (recCmd.split(' ')[0] + ': ' + data).replace(/\r?\n/g, ' ').trim());
+				util.log('[' + i + '] #' + (recCmd.split(' ')[0] + ': ' + data).replace(/\r?\n/g, ' ').trim());
 			});
 			
 			var removeSignalListener;
@@ -931,7 +949,7 @@ function getEpg() {
 				
 				// 一時録画ファイル削除
 				fs.unlinkSync(recPath);
-				util.log('UNLINK: ' + recPath);
+				util.log('[' + i + '] UNLINK: ' + recPath);
 				
 				// 終了
 				process.nextTick(process.exit);
@@ -1086,7 +1104,7 @@ function getEpg() {
 			setTimeout(function () {
 				r.splice(r.indexOf(ch.n), 1);
 				tick();
-			}, 50);
+			}, 250);
 		};
 		
 		// 取得開始処理
@@ -1123,7 +1141,7 @@ function getEpg() {
 			get(ch.n, retryCount, onGot);
 			
 			if (ch.type === 'GR') {
-				setTimeout(tick, 100);
+				setTimeout(tick, 200);
 			}
 		}
 		
