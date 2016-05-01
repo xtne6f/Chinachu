@@ -1,0 +1,13 @@
+dofile(mg.script_name:gsub('[^\\/]*$','')..'akarin.lua')
+
+post=ReadPost()
+code=500
+id=mg.request_info.uri:match('/(%d+)%.json$')
+if id then
+  if EffectiveMethod(post)=='DELETE' then
+    edcb.DelRecFileInfo(0+id)
+    code=200
+  end
+end
+
+mg.write('HTTP/1.1 '..code..' '..mg.get_response_code_text(code)..'\r\nContent-Type: application/json\r\nContent-Length: 2'..(mg.keep_alive(true) and '' or '\r\nConnection: close')..'\r\n\r\n{}')

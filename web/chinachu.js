@@ -31,10 +31,10 @@
 		}
 	};
 	
-	app.socket = io.connect(window.location.protocol + '//' + window.location.host, {
-		connectTimeout: 3000,
-		resource: window.location.pathname.replace(/^\/|[^\/]*$/g, '') + 'socket.io',
-	});
+	//app.socket = io.connect(window.location.protocol + '//' + window.location.host, {
+	//	connectTimeout: 3000,
+	//	resource: window.location.pathname.replace(/^\/|[^\/]*$/g, '') + 'socket.io',
+	//});
 	
 	// コントロールビュー初期化
 	app.f.enterControlView = function _enterControlView() {
@@ -461,16 +461,71 @@
 		app.stat.lastRecordedCount = e.memo.length;
 	});
 	
-	app.socket.on('connect'   , socketOnConnect);
-	app.socket.on('disconnect', socketOnDisconnect);
+	//app.socket.on('connect'   , socketOnConnect);
+	//app.socket.on('disconnect', socketOnDisconnect);
 	
-	app.socket.on('status'    , socketOnStatus);
+	//app.socket.on('status'    , socketOnStatus);
 	
-	app.socket.on('notify-rules'    , socketOnNotifyRules);
-	app.socket.on('notify-reserves' , socketOnNotifyReserves);
-	app.socket.on('notify-recording', socketOnNotifyRecording);
-	app.socket.on('notify-recorded' , socketOnNotifyRecorded);
-	app.socket.on('notify-schedule' , socketOnNotifySchedule);
+	//app.socket.on('notify-rules'    , socketOnNotifyRules);
+	//app.socket.on('notify-reserves' , socketOnNotifyReserves);
+	//app.socket.on('notify-recording', socketOnNotifyRecording);
+	//app.socket.on('notify-recorded' , socketOnNotifyRecorded);
+	//app.socket.on('notify-schedule' , socketOnNotifySchedule);
+	
+	setTimeout(socketOnConnect, 0);
+	setTimeout(function () {
+		socketOnStatus({
+			connectedCount: 1,
+			feature: {
+				previewer   : true,
+				streamer    : true,
+				filer       : true,
+				configurator: true
+			},
+			system: {
+				core: 1
+			},
+			operator: {
+				alive: true,
+				pid  : 100
+			},
+			wui: {
+				alive: true,
+				pid  : 200
+			}
+		});
+	}, 0);
+	var notifyStatus = {
+		digest  : "",
+		schedule: "",
+		reserves: "",
+		recorded: "",
+		rules   : ""
+	};
+	var pollNotifyStatus = function () {
+		new Ajax.Request('./api/notify.json?digest=' + notifyStatus.digest, {
+			method: 'get',
+			onComplete: function () {
+				setTimeout(pollNotifyStatus, 200);
+			},
+			onSuccess: function (t) {
+				var ns = t.responseJSON;
+				if (ns.reserves !== notifyStatus.reserves) {
+					socketOnNotifyReserves();
+					socketOnNotifyRecording();
+				}
+				if (ns.recorded !== notifyStatus.recorded) {
+					socketOnNotifyRecorded();
+				}
+				// TODO: 番組IDに予約IDをくっつけているため予約更新時に番組表も更新する(IDの再構成をちゃんとやれば不要)
+				if (ns.reserves !== notifyStatus.reserves || ns.schedule !== notifyStatus.schedule) {
+					socketOnNotifySchedule();
+				}
+				notifyStatus = ns;
+			}
+		});
+	};
+	setTimeout(pollNotifyStatus, 0);
 	
 	// ジャンル通知
 	var remindedProgramIds = [];

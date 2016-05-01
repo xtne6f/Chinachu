@@ -1,0 +1,31 @@
+dofile(mg.script_name:gsub('[^\\/]*$','')..'akarin.lua')
+
+ct='['
+for i,v in ipairs(edcb.GetRecFileInfoBasic and edcb.GetRecFileInfoBasic() or edcb.GetRecFileInfo()) do
+  title,flags=TrimFlags(v.title)
+  ct=ct..(i==1 and '{' or ',{')
+    ..'"id":"'..v.id..'",'
+    ..'"channel":{'
+      ..'"n":'..(v.onid*65536+v.tsid)..','
+      ..'"type":"'..NetworkType(v.onid)..'",'
+      ..'"channel":"'..(v.onid*65536+v.tsid)..'",'
+      ..'"name":"'..JsonEscape(v.serviceName)..'",'
+      ..'"id":"'..(v.onid*65536+v.tsid)..'_'..v.sid..'",'
+      ..'"sid":"'..v.sid..'"},'
+    ..'"category":"'..Category(0xffff)..'",'
+    ..'"title":"'..JsonEscape(title)..'",'
+    ..'"subTitle":"",'
+    ..'"fullTitle":"'..JsonEscape(v.title)..'",'
+    ..'"detail":"'..JsonEscape(v.comment)..' (drop='..v.drops..' / scramble='..v.scrambles..')",'
+    ..'"episode":null,'
+    ..'"start":'..UnixTime(v.startTime)..','
+    ..'"end":'..(UnixTime(v.startTime)+v.durationSecond*1000)..','
+    ..'"seconds":'..v.durationSecond..','
+    ..'"flags":['..(#flags==0 and '' or '"')..table.concat(flags, '","')..(#flags==0 and '' or '"')..'],'
+    ..'"isManualReserved":false}'
+end
+ct=ct..']'
+
+zl=Deflate(ct)
+mg.write('HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n'..(zl and 'Content-Encoding: deflate\r\n' or '')
+  ..'Content-Length: '..(zl and #zl or #ct)..(mg.keep_alive(true) and '' or '\r\nConnection: close')..'\r\n\r\n', zl or ct)

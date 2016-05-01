@@ -1,0 +1,32 @@
+dofile(mg.script_name:gsub('[^\\/]*$','')..'akarin.lua')
+
+ct='['
+for i,v in ipairs(edcb.GetReserveData()) do
+  w=edcb.SearchEpg(v.onid, v.tsid, v.sid, v.eid)
+  title,flags=TrimFlags(v.title)
+  ct=ct..(i==1 and '{' or ',{')
+    ..'"id":"'..(v.onid*65536+v.tsid)..'_'..v.sid..'_'..v.eid..'_'..v.reserveID..'",'
+    ..'"channel":{'
+      ..'"n":'..(v.onid*65536+v.tsid)..','
+      ..'"type":"'..NetworkType(v.onid)..'",'
+      ..'"channel":"'..(v.onid*65536+v.tsid)..'",'
+      ..'"name":"'..JsonEscape(v.stationName)..'",'
+      ..'"id":"'..(v.onid*65536+v.tsid)..'_'..v.sid..'",'
+      ..'"sid":"'..v.sid..'"},'
+    ..'"category":"'..Category(w and w.contentInfoList and #w.contentInfoList~=0 and w.contentInfoList[1].content_nibble or 0xffff)..'",'
+    ..'"title":"'..JsonEscape(title)..'",'
+    ..'"subTitle":"",'
+    ..'"fullTitle":"'..JsonEscape(v.title)..'",'
+    ..'"detail":"'..JsonEscape(w and w.shortInfo and w.shortInfo.text_char or '')..'",'
+    ..'"episode":null,'
+    ..'"start":'..UnixTime(v.startTime)..','
+    ..'"end":'..(UnixTime(v.startTime)+v.durationSecond*1000)..','
+    ..'"seconds":'..v.durationSecond..','
+    ..'"flags":['..(#flags==0 and '' or '"')..table.concat(flags, '","')..(#flags==0 and '' or '"')..'],'
+    ..'"isConflict":'..(v.overlapMode==0 and 'false' or 'true')..','
+    ..'"isManualReserved":'..(v.comment:find('^EPG自動予約') and 'false' or 'true')..','
+    ..'"isSkip":'..(v.recSetting.recMode==5 and 'true' or 'false')..'}'
+end
+ct=ct..']'
+
+mg.write('HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: '..#ct..(mg.keep_alive(true) and '' or '\r\nConnection: close')..'\r\n\r\n', ct)
