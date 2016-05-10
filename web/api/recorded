@@ -2,12 +2,57 @@ dofile(mg.script_name:gsub('[^\\/]*$','')..'akarin.lua')
 
 post=ReadPost()
 code=500
+ctype='application/json'
+ct='{}'
 id=mg.request_info.uri:match('/(%d+)%.json$')
 if id then
   if EffectiveMethod(post)=='DELETE' then
     edcb.DelRecFileInfo(0+id)
     code=200
   end
+else
+  id,cmd=mg.request_info.uri:match('/(%d+)/(file%.json)$')
+  if not id then
+    id,cmd=mg.request_info.uri:match('/(%d+)/(file%.m2ts)$')
+    if not id then
+      id,cmd=mg.request_info.uri:match('/(%d+)/(preview%.txt)$')
+    end
+  end
+  if id then
+    code=404
+    r=edcb.GetRecFileInfo(0+id)
+    if r then
+      code=410
+      f=io.open(edcb.Convert('cp932','utf-8',r.recFilePath),'rb')
+      if f then
+        if cmd=='file.json' then
+          code=200
+          ct='{"size":'..f:seek("end")..'}'
+        elseif cmd=='file.m2ts' then
+          code=nil
+          mg.write(Response(200,mg.get_mime_type(cmd))..'Content-Disposition: filename='..cmd..'\r\n\r\n')
+          while true do
+            buf=f:read(48128)
+            if not buf or #buf==0 or not mg.write(buf) then
+              break
+            end
+          end
+        elseif cmd=='preview.txt' then
+          -- TODO: サムネ抽出
+          ff=io.open(mg.document_root..'\\chinachu.png','rb')
+          if ff then
+            code=200
+            ctype='text/plain'
+            ct='data:image/png;base64,'..mg.base64_encode(ff:read('*a'))
+            ff:close()
+          end
+        end
+        f:close()
+      end
+    end
+  end
 end
 
-mg.write('HTTP/1.1 '..code..' '..mg.get_response_code_text(code)..'\r\nContent-Type: application/json\r\nContent-Length: 2'..(mg.keep_alive(true) and '' or '\r\nConnection: close')..'\r\n\r\n{}')
+if code then
+  mg.write(Response(code,ctype,'utf-8',#ct)..'\r\n',ct)
+end

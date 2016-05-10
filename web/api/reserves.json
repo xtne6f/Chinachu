@@ -29,4 +29,4 @@ for i,v in ipairs(edcb.GetReserveData()) do
 end
 ct=ct..']'
 
-mg.write('HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: '..#ct..(mg.keep_alive(true) and '' or '\r\nConnection: close')..'\r\n\r\n', ct)
+mg.write(Response(200,'application/json','utf-8',#ct)..'\r\n',ct)

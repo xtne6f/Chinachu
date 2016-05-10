@@ -13,5 +13,4 @@ if mg.request_info.uri:match('/operator/stream.txt') then
 end
 
 zl=Deflate(ct)
-mg.write('HTTP/1.1 '..code..' '..mg.get_response_code_text(code)..'\r\nContent-Type: text/plain\r\n'..(zl and 'Content-Encoding: deflate\r\n' or '')
-  ..'Content-Length: '..(zl and #zl or #ct)..(mg.keep_alive(true) and '' or '\r\nConnection: close')..'\r\n\r\n', zl or ct)
+mg.write(Response(code,'text/plain','utf-8',zl and #zl or #ct)..(zl and 'Content-Encoding: deflate\r\n' or '')..'\r\n',zl or ct)

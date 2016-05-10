@@ -40,6 +40,27 @@ function TrimFlags(s)
   return s,flags
 end
 
+--ドキュメントルートへの相対パスを取得する
+function PathToRoot()
+  return ('../'):rep(#mg.script_name:gsub('[^\\/]*[\\/]+[^\\/]*','N')-#(mg.document_root..'/'):gsub('[^\\/]*[\\/]+','N'))
+end
+
+--OSの絶対パスをドキュメントルートからの相対パスに変換する
+function NativeToDocumentPath(path)
+  local root=(mg.document_root..'/'):gsub('[\\/]+','/')
+  if path:gsub('[\\/]+','/'):sub(1,#root):lower()==root:lower() then
+    return path:gsub('[\\/]+','/'):sub(#root+1)
+  end
+end
+
+--レスポンスを生成する
+function Response(code,ctype,charset,cl)
+  return 'HTTP/1.1 '..code..' '..mg.get_response_code_text(code)
+    ..(ctype and '\r\nX-Content-Type-Options: nosniff\r\nContent-Type: '..ctype..(charset and '; charset='..charset or '') or '')
+    ..(cl and '\r\nContent-Length: '..cl or '')
+    ..(mg.keep_alive(not not cl) and '\r\n' or '\r\nConnection: close\r\n')
+end
+
 --可能ならコンテンツをzlib圧縮する(lua-zlib(zlib.dll)が必要)
 function Deflate(ct)
   local zl

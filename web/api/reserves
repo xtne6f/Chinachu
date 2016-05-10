@@ -32,4 +32,4 @@ else
   end
 end
 
-mg.write('HTTP/1.1 '..code..' '..mg.get_response_code_text(code)..'\r\nContent-Type: application/json\r\nContent-Length: 2'..(mg.keep_alive(true) and '' or '\r\nConnection: close')..'\r\n\r\n{}')
+mg.write(Response(code,'application/json','utf-8',2)..'\r\n{}')
