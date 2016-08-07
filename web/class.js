@@ -659,9 +659,9 @@
 					}.bind(this)
 				});
 				
-				if (this.program.channel.type === 'GR') {
+				{
 					buttons.push({
-						label   : '予約 (ワンセグ)',
+						label   : '予約 (プリセット2)',
 						color   : '@red',
 						onSelect: function (e, modal) {
 							e.targetButton.disable();
