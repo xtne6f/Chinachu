@@ -51,11 +51,15 @@ function NativeToDocumentPath(path)
   if path:gsub('[\\/]+','/'):sub(1,#root):lower()==root:lower() then
     return path:gsub('[\\/]+','/'):sub(#root+1)
   end
+  return nil
 end
 
 --レスポンスを生成する
 function Response(code,ctype,charset,cl)
   return 'HTTP/1.1 '..code..' '..mg.get_response_code_text(code)
+    ..'\r\nCache-Control: no-cache\r\n'
+    ..'X-Frame-Options: SAMEORIGIN\r\n'
+    ..'X-XSS-Protection: 1; mode=block'
     ..(ctype and '\r\nX-Content-Type-Options: nosniff\r\nContent-Type: '..ctype..(charset and '; charset='..charset or '') or '')
     ..(cl and '\r\nContent-Length: '..cl or '')
     ..(mg.keep_alive(not not cl) and '\r\n' or '\r\nConnection: close\r\n')
