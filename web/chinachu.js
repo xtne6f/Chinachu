@@ -202,24 +202,6 @@
 				}
 			})
 		});
-		
-		app.view.footer.add({
-			key: 'operator-status',
-			ui : new sakura.ui.Button({
-				style: { 'float': 'right', 'cursor': 'default' },
-				label: 'Operator',
-				icon : './icons/status-offline.png',
-			})
-		});
-		
-		app.view.footer.add({
-			key: 'wui-status',
-			ui : new sakura.ui.Button({
-				style: { 'float': 'right', 'cursor': 'default' },
-				label: 'WUI',
-				icon : './icons/status-offline.png',
-			})
-		});
 	};
 	
 	// オーバーラインハンドラ
@@ -275,8 +257,6 @@
 		
 		document.fire('chinachu:connect');
 		
-		app.view.footer.one('wui-status').entity.style.backgroundImage = 'url(./icons/status.png)';
-		
 		//app.notify.create({ title: 'Chinachu', message: 'CONNECTED'.__() });
 	};
 	
@@ -285,35 +265,12 @@
 		
 		document.fire('chinachu:disconnect');
 		
-		app.view.footer.one('wui-status').entity.style.backgroundImage = 'url(./icons/status-offline.png)';
-		
 		app.notify.create({ title: 'Chinachu', message: 'DISCONNECTED'.__() });
 	};
 	
 	var socketOnStatus = function _socketOnStatus(data) {
 		app.chinachu.status = data;
 		document.fire('chinachu:status', app.chinachu.status);
-		
-		if (app.view.footer.one('operator-status')._status !== data.operator.alive) {
-			if (data.operator.alive) {
-				app.view.footer.one('operator-status').entity.style.backgroundImage = 'url(./icons/status.png)';
-			} else {
-				app.view.footer.one('operator-status').entity.style.backgroundImage = 'url(./icons/status-offline.png)';
-			}
-		}
-		app.view.footer.one('operator-status')._status = data.operator.alive;
-		
-		if (app.view.footer.one('count') === null) {
-			app.view.footer.add({
-				key: 'count',
-				ui : new sakura.ui.Button({
-					style: { 'float': 'right', 'cursor': 'default' },
-					label: data.connectedCount,
-					icon : './icons/user-medium-silhouette.png'
-				})
-			});
-		}
-		app.view.footer.one('count').entity.update(data.connectedCount);
 	};
 	
 	var socketOnRules = function _socketOnRules(data) {

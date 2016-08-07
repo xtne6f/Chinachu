@@ -34,20 +34,6 @@ P = Class.create(P, {
 					onSelect: function() {
 						this.view.operatorLog.scrollTop = this.view.operatorLog.scrollHeight;
 					}.bind(this)
-				},
-				{
-					label   : 'Scheduler',
-					element : this.view.schedulerLog,
-					onSelect: function() {
-						this.view.schedulerLog.scrollTop = this.view.schedulerLog.scrollHeight;
-					}.bind(this)
-				},
-				{
-					label   : 'WUI',
-					element : this.view.wuiLog,
-					onSelect: function() {
-						this.view.wuiLog.scrollTop = this.view.wuiLog.scrollHeight;
-					}.bind(this)
 				}
 			]
 		}).insertTo(this.view.content);

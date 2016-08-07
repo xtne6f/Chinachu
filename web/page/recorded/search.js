@@ -62,12 +62,6 @@ P = Class.create(P, {
 					disableResize: true
 				},
 				{
-					key  : 'category',
-					label: 'ジャンル',
-					width: 70,
-					align: 'center',
-				},
-				{
 					key  : 'channel',
 					label: 'ch',
 					width: 140
@@ -334,29 +328,6 @@ P = Class.create(P, {
 			labelWidth : '100px',
 			labelAlign : 'right',
 			fields     : [
-				{
-					key   : 'cat',
-					label : 'カテゴリー',
-					input : {
-						type : 'pulldown',
-						items: (function() {
-							var array = [];
-
-							[
-								'anime', 'information', 'news', 'sports',
-								'variety', 'drama', 'music', 'cinema', 'etc'
-							].each(function(a) {
-								array.push({
-									label     : a,
-									value     : a,
-									isSelected: (this.self.query.cat === a)
-								});
-							}.bind(this));
-
-							return array;
-						}.bind(this))()
-					}
-				},
 				{
 					key   : 'title',
 					label : 'タイトル',

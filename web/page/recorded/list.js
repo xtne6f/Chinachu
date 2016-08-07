@@ -28,17 +28,6 @@ P = Class.create(P, {
 	}
 	,
 	initToolbar: function _initToolbar() {
-		
-		this.view.toolbar.add({
-			key: 'execute-scheduler',
-			ui : new sakura.ui.Button({
-				label  : 'EXECUTE {0}'.__('CLEANUP'.__()),
-				icon   : './icons/eraser.png',
-				onClick: function() {
-					new chinachu.ui.Cleanup();
-				}.bind(this)
-			})
-		});
 
 		this.view.toolbar.add({
 			key: 'search recored programs',
@@ -86,12 +75,6 @@ P = Class.create(P, {
 					width: 45,
 					align: 'center',
 					disableResize: true
-				},
-				{
-					key  : 'category',
-					label: 'ジャンル',
-					width: 70,
-					align: 'center',
 				},
 				{
 					key  : 'channel',
@@ -163,13 +146,6 @@ P = Class.create(P, {
 						icon    : './icons/eraser.png',
 						onSelect: function() {
 							new chinachu.ui.RemoveRecordedProgram(program.id);
-						}
-					},
-					{
-						label   : '録画ファイルの削除...',
-						icon    : './icons/cross-script.png',
-						onSelect: function() {
-							new chinachu.ui.RemoveRecordedFile(program.id);
 						}
 					},
 					'------------------------------------------',
