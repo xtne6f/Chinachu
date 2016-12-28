@@ -1,0 +1,33 @@
+dofile(mg.script_name:gsub('[^\\/]*$','')..'akarin.lua')
+
+digest=mg.get_var(mg.request_info.query_string,'digest')
+a=edcb.GetReserveData()
+for i=1,50 do
+  sch=edcb.GetNotifyUpdateCount(1)
+  res=edcb.GetNotifyUpdateCount(2)..','
+  -- 予約済から録画中への変化を検出するため
+  now=os.time()
+  for i,v in ipairs(a) do
+    if v.recSetting.recMode==4 and now>=os.time(v.startTime) or
+       v.recSetting.recMode<=3 and now+300>=os.time(v.startTime) and edcb.GetRecFilePath(v.reserveID) then
+      res=res..'+'
+    end
+    res=res..v.reserveID..','
+  end
+  res=mg.md5(res)
+  rec=edcb.GetNotifyUpdateCount(3)
+  rul=edcb.GetNotifyUpdateCount(4)
+  if digest~=sch..'_'..res..'_'..rec..'_'..rul then
+    break
+  end
+  edcb.Sleep(200)
+end
+
+ct='{'
+  ..'"schedule":"'..sch..'",'
+  ..'"reserves":"'..res..'",'
+  ..'"recorded":"'..rec..'",'
+  ..'"rules":"'..rul..'",'
+  ..'"digest":"'..sch..'_'..res..'_'..rec..'_'..rul..'"}'
+
+mg.write(Response(200,'application/json','utf-8',#ct)..'\r\n',ct)

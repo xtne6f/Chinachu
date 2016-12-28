@@ -1,0 +1,11 @@
+dofile(mg.script_name:gsub('[^\\/]*$','')..'akarin.lua')
+
+post=ReadPost()
+code=500
+if EffectiveMethod(post)=='PUT' then
+  if edcb.EpgCapNow() then
+    code=200
+  end
+end
+
+mg.write(Response(code,'application/json','utf-8',2)..'\r\n{}')

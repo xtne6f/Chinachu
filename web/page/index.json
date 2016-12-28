@@ -1,5 +1,5 @@
 {
-	"categoryIndex": ["dashboard", "schedule", "rules", "reserves", "recording", "recorded", "pref", "search"],
+	"categoryIndex": ["dashboard", "schedule", "rules", "reserves", "recording", "recorded", "search"],
 
 	"defaultCategory": "dashboard",
 
@@ -8,7 +8,7 @@
 			"icon"       : "./icons/home-medium.png",
 			"label"      : "dashboard",
 			"defaultPage": "top",
-			"pageIndex"  : ["top", "status", "log", "storage"],
+			"pageIndex"  : ["top", "log"],
 			"page"       : {
 				"top": {
 					"label"     : "Top",

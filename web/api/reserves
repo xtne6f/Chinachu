@@ -1,0 +1,35 @@
+dofile(mg.script_name:gsub('[^\\/]*$','')..'akarin.lua')
+
+post=ReadPost()
+code=500
+id=mg.request_info.uri:match('/%d+_%d+_%d+_(%d+)%.json$')
+if id then
+  if EffectiveMethod(post)=='DELETE' then
+    edcb.DelReserveData(0+id)
+    code=200
+  end
+else
+  id=mg.request_info.uri:match('/%d+_%d+_%d+_(%d+)/skip%.json$')
+  if id then
+    r=edcb.GetReserveData(0+id)
+    if r and EffectiveMethod(post)=='PUT' then
+      r.recSetting.recMode=5
+      if edcb.ChgReserveData(r) then
+        code=200
+      end
+    end
+  else
+    id=mg.request_info.uri:match('/%d+_%d+_%d+_(%d+)/unskip%.json$')
+    if id then
+      r=edcb.GetReserveData(0+id)
+      if r and EffectiveMethod(post)=='PUT' then
+        r.recSetting.recMode=1
+        if edcb.ChgReserveData(r) then
+          code=200
+        end
+      end
+    end
+  end
+end
+
+mg.write(Response(code,'application/json','utf-8',2)..'\r\n{}')

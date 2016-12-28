@@ -1,0 +1,40 @@
+dofile(mg.script_name:gsub('[^\\/]*$','')..'akarin.lua')
+
+post=ReadPost()
+code=500
+ch,sid,eid=mg.request_info.uri:match('/(%d+)_(%d+)_(%d+)%.json$')
+if ch and EffectiveMethod(post)=='PUT' then
+  r={}
+  -- 予約(ワンセグ)機能はプリセット2に変換
+  pre=edcb.EnumRecPresetInfo()
+  r.recSetting=pre[#pre>=2 and mg.get_var(post,'mode')=='1seg' and 2 or 1].recSetting
+  r.onid=math.floor((0+ch)/65536)
+  r.tsid=(0+ch)%65536
+  r.sid=0+sid
+  r.eid=0+eid
+  e=edcb.SearchEpg(r.onid,r.tsid,r.sid,r.eid)
+  for i,v in ipairs(edcb.GetReserveData()) do
+    if v.onid==r.onid and v.tsid==r.tsid and v.sid==r.sid and v.eid==r.eid then
+      e=nil
+      break
+    end
+  end
+  if e and e.startTime and e.durationSecond then
+    r.title=e.shortInfo and e.shortInfo.event_name or ''
+    r.startTime=e.startTime
+    r.startTimeEpg=e.startTime
+    r.durationSecond=e.durationSecond
+    r.stationName=''
+    for i,v in ipairs(edcb.GetServiceList() or {}) do
+      if v.onid==r.onid and v.tsid==r.tsid and v.sid==r.sid then
+        r.stationName=v.service_name
+        break
+      end
+    end
+    if edcb.AddReserveData(r) then
+      code=200
+    end
+  end
+end
+
+mg.write(Response(code,'application/json','utf-8',2)..'\r\n{}')

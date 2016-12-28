@@ -30,17 +30,6 @@ P = Class.create(P, {
 	initToolbar: function _initToolbar() {
 
 		this.view.toolbar.add({
-			key: 'execute-scheduler',
-			ui : new sakura.ui.Button({
-				label  : 'EXECUTE {0}'.__('CLEANUP'.__()),
-				icon   : './icons/eraser.png',
-				onClick: function() {
-					new chinachu.ui.Cleanup();
-				}.bind(this)
-			})
-		});
-
-		this.view.toolbar.add({
 			key: 'search recored programs',
 			ui : new sakura.ui.Button({
 				label  : '{0}'.__('SEARCH RECORDED PROGRAMS'.__()),
@@ -91,12 +80,6 @@ P = Class.create(P, {
 					key  : 'channel',
 					label: 'チャンネル',
 					width: 140
-				},
-				{
-					key  : 'category',
-					label: 'ジャンル',
-					width: 70,
-					align: 'center',
 				},
 				{
 					key  : 'title',

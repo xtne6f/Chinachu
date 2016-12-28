@@ -1,0 +1,58 @@
+dofile(mg.script_name:gsub('[^\\/]*$','')..'akarin.lua')
+
+rt={}
+for i,v in ipairs(edcb.GetReserveData()) do
+  rt[(v.onid*65536+v.tsid)..'_'..v.sid..'_'..v.eid]=v.reserveID
+end
+
+ctt={'['}
+for i,v in ipairs(edcb.GetServiceList() or {}) do
+  if not v.partialReceptionFlag then
+    wrote=false
+    for j,w in ipairs(edcb.EnumEventInfo({{onid=v.onid, tsid=v.tsid, sid=v.sid}}) or {}) do
+      if w.startTime and w.durationSecond and
+         (not w.eventGroupInfo or #w.eventGroupInfo.eventDataList~=1 or w.eventGroupInfo.eventDataList[1].sid>=v.sid) then
+        if not wrote then
+          table.insert(ctt, (#ctt==1 and '{' or ',{')
+            ..'"n":'..(v.onid*65536+v.tsid)..','
+            ..'"type":"'..NetworkType(v.onid)..'",'
+            ..'"channel":"'..(v.onid*65536+v.tsid)..'",'
+            ..'"name":"'..JsonEscape(v.service_name)..'",'
+            ..'"id":"'..(v.onid*65536+v.tsid)..'_'..v.sid..'",'
+            ..'"sid":"'..v.sid..'",'
+            ..'"programs":[')
+        end
+        title,flags=TrimFlags(w.shortInfo and w.shortInfo.event_name or '')
+        reserveID=rt[(v.onid*65536+v.tsid)..'_'..v.sid..'_'..w.eid]
+        table.insert(ctt, (wrote and ',{' or '{')
+          ..'"id":"'..(v.onid*65536+v.tsid)..'_'..v.sid..'_'..w.eid..(reserveID and '_'..reserveID or '')..'",'
+          ..'"channel":{'
+            ..'"n":'..(v.onid*65536+v.tsid)..','
+            ..'"type":"'..NetworkType(v.onid)..'",'
+            ..'"channel":"'..(v.onid*65536+v.tsid)..'",'
+            ..'"name":"'..JsonEscape(v.service_name)..'",'
+            ..'"id":"'..(v.onid*65536+v.tsid)..'_'..v.sid..'",'
+            ..'"sid":"'..v.sid..'"},'
+          ..'"category":"'..Category(w.contentInfoList and #w.contentInfoList~=0 and w.contentInfoList[1].content_nibble or 0xffff)..'",'
+          ..'"title":"'..JsonEscape(title)..'",'
+          ..'"subTitle":"",'
+          ..'"fullTitle":"'..JsonEscape(w.shortInfo and w.shortInfo.event_name or '')..'",'
+          ..'"detail":"'..JsonEscape(w.shortInfo and w.shortInfo.text_char or '')..'",'
+          ..'"episode":null,'
+          ..'"start":'..UnixTime(w.startTime)..','
+          ..'"end":'..(UnixTime(w.startTime)+w.durationSecond*1000)..','
+          ..'"seconds":'..w.durationSecond..','
+          ..'"flags":['..(#flags==0 and '' or '"')..table.concat(flags, '","')..(#flags==0 and '' or '"')..']}')
+        wrote=true
+      end
+    end
+    if wrote then
+      table.insert(ctt, ']}')
+    end
+  end
+end
+table.insert(ctt, ']')
+ct=table.concat(ctt)
+
+zl=Deflate(ct)
+mg.write(Response(200,'application/json','utf-8',zl and #zl or #ct)..(zl and 'Content-Encoding: deflate\r\n' or '')..'\r\n',zl or ct)
