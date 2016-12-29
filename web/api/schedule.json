@@ -20,6 +20,7 @@ for i,v in ipairs(edcb.GetServiceList() or {}) do
             ..'"name":"'..JsonEscape(v.service_name)..'",'
             ..'"id":"'..(v.onid*65536+v.tsid)..'_'..v.sid..'",'
             ..'"sid":"'..v.sid..'",'
+            ..'"nid":"'..v.onid..'",'
             ..'"programs":[')
         end
         title,flags=TrimFlags(w.shortInfo and w.shortInfo.event_name or '')
@@ -32,12 +33,13 @@ for i,v in ipairs(edcb.GetServiceList() or {}) do
             ..'"channel":"'..(v.onid*65536+v.tsid)..'",'
             ..'"name":"'..JsonEscape(v.service_name)..'",'
             ..'"id":"'..(v.onid*65536+v.tsid)..'_'..v.sid..'",'
-            ..'"sid":"'..v.sid..'"},'
+            ..'"sid":"'..v.sid..'",'
+            ..'"nid":"'..v.onid..'"},'
           ..'"category":"'..Category(w.contentInfoList and #w.contentInfoList~=0 and w.contentInfoList[1].content_nibble or 0xffff)..'",'
           ..'"title":"'..JsonEscape(title)..'",'
           ..'"subTitle":"",'
           ..'"fullTitle":"'..JsonEscape(w.shortInfo and w.shortInfo.event_name or '')..'",'
-          ..'"detail":"'..JsonEscape(w.shortInfo and w.shortInfo.text_char or '')..'",'
+          ..'"detail":"'..JsonEscape((w.shortInfo and w.shortInfo.text_char or '')..(w.extInfo and '\n'..w.extInfo.text_char or ''))..'",'
           ..'"episode":null,'
           ..'"start":'..UnixTime(w.startTime)..','
           ..'"end":'..(UnixTime(w.startTime)+w.durationSecond*1000)..','

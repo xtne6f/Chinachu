@@ -1,0 +1,41 @@
+dofile(mg.script_name:gsub('[^\\/]*$','')..'akarin.lua')
+
+post=ReadPost()
+code=500
+ctype='application/json'
+ct='{}'
+id=mg.request_info.uri:match('/%d+_%d+_%d+_(%d+)%.json$')
+if id then
+  if EffectiveMethod(post)=='DELETE' then
+    edcb.DelReserveData(0+id)
+    code=200
+  end
+else
+  id,cmd=mg.request_info.uri:match('/%d+_%d+_%d+_(%d+)/(preview%.jpg)$')
+  if id then
+    code=404
+    recFilePath=edcb.GetRecFilePath(0+id)
+    if recFilePath then
+      code=410
+      f=io.open(edcb.Convert('cp932','utf-8',recFilePath),'rb')
+      if f then
+        if cmd=='preview.jpg' then
+          ct=''
+          ff=io.popen('readex -3200000 0 "'..edcb.Convert('cp932','utf-8',recFilePath)..'" | ffmpeg -f mpegts -i -'
+                      ..' -frames:v 1 -c:v mjpeg -an -f image2 -s 480x270 -map 0:0 -','rb')
+          if ff then
+            ct=ff:read('*a')
+            ff:close()
+          end
+          code=#ct~=0 and 200 or 404
+          ctype='image/jpeg'
+        end
+        f:close()
+      end
+    end
+  end
+end
+
+if code then
+  mg.write(Response(code,ctype,ctype~='image/jpeg' and 'utf-8',#ct)..'\r\n',ct)
+end

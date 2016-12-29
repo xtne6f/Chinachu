@@ -15,7 +15,7 @@ else
   if not id then
     id,cmd=mg.request_info.uri:match('/(%d+)/(file%.m2ts)$')
     if not id then
-      id,cmd=mg.request_info.uri:match('/(%d+)/(preview%.txt)$')
+      id,cmd=mg.request_info.uri:match('/(%d+)/(preview%.jpg)$')
     end
   end
   if id then
@@ -37,15 +37,17 @@ else
               break
             end
           end
-        elseif cmd=='preview.txt' then
-          -- TODO: サムネ抽出
-          ff=io.open(mg.document_root..'\\chinachu.png','rb')
+        elseif cmd=='preview.jpg' then
+          ct=''
+          pos=math.max((tonumber(mg.get_var(mg.request_info.query_string,'pos')) or 5)-1.5,0)
+          ff=io.popen('ffmpeg -f mpegts -ss '..pos..' -i "'..edcb.Convert('cp932','utf-8',r.recFilePath)
+                      ..'" -frames:v 1 -c:v mjpeg -an -f image2 -s 480x270 -map 0:0 -','rb')
           if ff then
-            code=200
-            ctype='text/plain'
-            ct='data:image/png;base64,'..mg.base64_encode(ff:read('*a'))
+            ct=ff:read('*a')
             ff:close()
           end
+          code=#ct~=0 and 200 or 404
+          ctype='image/jpeg'
         end
         f:close()
       end
@@ -54,5 +56,5 @@ else
 end
 
 if code then
-  mg.write(Response(code,ctype,'utf-8',#ct)..'\r\n',ct)
+  mg.write(Response(code,ctype,ctype~='image/jpeg' and 'utf-8',#ct)..'\r\n',ct)
 end

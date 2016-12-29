@@ -24,7 +24,7 @@ function NetworkType(onid)
 end
 
 function JsonEscape(s)
-  return s:gsub('[\n\r\t]',''):gsub('[\\"]','\\%0')
+  return s:gsub('[\r\t]',''):gsub('[\\"]','\\%0'):gsub('\n','\\n')
 end
 
 function TrimFlags(s)
