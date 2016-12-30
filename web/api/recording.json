@@ -14,6 +14,7 @@ for i,v in ipairs(edcb.GetReserveData()) do
         break
       end
     end
+    recFilePath=edcb.GetRecFilePath(v.reserveID)
     e=edcb.SearchEpg(v.onid, v.tsid, v.sid, v.eid)
     title,flags=TrimFlags(v.title)
     ct=ct..(#ct==1 and '{' or ',{')
@@ -23,6 +24,7 @@ for i,v in ipairs(edcb.GetReserveData()) do
         ..'"name":"'..JsonEscape(tunerName)..'",'
         ..'"isScrambling":false},'
       ..'"id":"'..(v.onid*65536+v.tsid)..'_'..v.sid..'_'..v.eid..'_'..v.reserveID..'",'
+      ..(recFilePath and '"recorded":"./'..JsonEscape(NativeToDocumentPath(recFilePath) or 'outside.ts')..'",' or '')
       ..'"channel":{'
         ..'"n":'..(v.onid*65536+v.tsid)..','
         ..'"type":"'..NetworkType(v.onid)..'",'

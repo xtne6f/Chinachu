@@ -11,14 +11,8 @@ if id then
     code=200
   end
 else
-  id,cmd=mg.request_info.uri:match('/(%d+)/(file%.json)$')
-  if not id then
-    id,cmd=mg.request_info.uri:match('/(%d+)/(file%.m2ts)$')
-    if not id then
-      id,cmd=mg.request_info.uri:match('/(%d+)/(preview%.jpg)$')
-    end
-  end
-  if id then
+  id,cmd=mg.request_info.uri:match('/(%d+)/([.%w]+)$')
+  if id and (cmd=='file.json' or cmd=='file.m2ts' or cmd=='preview.jpg' or cmd=='watch.webm' or cmd=='watch.mp4') then
     code=404
     r=edcb.GetRecFileInfo(0+id)
     if r then
@@ -48,6 +42,38 @@ else
           end
           code=#ct~=0 and 200 or 404
           ctype='image/jpeg'
+        elseif cmd=='watch.webm' or cmd=='watch.mp4' then
+          code=nil
+          mg.write(Response(200,mg.get_mime_type(cmd))..'Content-Disposition: '
+                   ..((mg.get_var(mg.request_info.query_string,'mode') or '')=='download' and 'attachment; ' or '')..'filename='..cmd..'\r\n\r\n')
+          d={
+            ss=tonumber(mg.get_var(mg.request_info.query_string,'ss')) or 0,
+            t=tonumber(mg.get_var(mg.request_info.query_string,'t')),
+            s=(mg.get_var(mg.request_info.query_string,'s') or ''):match('^[0-9]+x[0-9]+$'),
+            cv=cmd=='watch.mp4' and 'h264' or 'vp9',
+            ca=cmd=='watch.mp4' and 'aac' or 'opus',
+            bv=(mg.get_var(mg.request_info.query_string,'b%3Av') or ''):match('^[0-9]+[kM]$'),
+            ba=(mg.get_var(mg.request_info.query_string,'b%3Aa') or ''):match('^[0-9]+[kM]$')
+          }
+          ibitrate=r.durationSecond~=0 and f:seek('end')/r.durationSecond or 0
+          videoBitrate=d.bv and d.bv:sub(0,#d.bv-1)*1024*(d.bv:sub(-1)=='M' and 1024 or 1) or 0
+          audioBitrate=d.ba and d.ba:sub(0,#d.ba-1)*1024*(d.ba:sub(-1)=='M' and 1024 or 1) or 0
+          ff=io.popen('readex '..math.floor(math.max(ibitrate*d.ss,0))..' 0 "'..edcb.Convert('cp932','utf-8',r.recFilePath)
+                      ..'" | ffmpeg -f mpegts -i -'..(d.t and ' -t '..d.t or '')
+                      ..' -c:v '..d.cv..' -c:a '..d.ca..(d.s and ' -s '..d.s or '')..' -filter:v yadif'
+                      ..(d.bv and ' -b:v '..d.bv..' -minrate:v '..d.bv..' -maxrate:v '..d.bv..' -bufsize:v '..(videoBitrate*8) or '')
+                      ..(d.ba and ' -b:a '..d.ba..' -minrate:a '..d.ba..' -maxrate:a '..d.ba..' -bufsize:a '..(audioBitrate*8) or '')
+                      ..(d.cv=='h264' and ' -profile:v baseline -preset ultrafast -tune fastdecode,zerolatency -movflags frag_keyframe+empty_moov+faststart+default_base_moof -f mp4'
+                        or ' -deadline realtime -speed 4 -cpu-used -8 -f webm')..' -','rb')
+          if ff then
+            while true do
+              buf=ff:read(48128)
+              if not buf or #buf==0 or not mg.write(buf) then
+                break
+              end
+            end
+            ff:close()
+          end
         end
         f:close()
       end

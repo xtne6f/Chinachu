@@ -9,7 +9,7 @@ for i,v in ipairs(edcb.GetRecFileInfoBasic and edcb.GetRecFileInfoBasic() or edc
       ..'"n":0,'
       ..'"name":"Unknown",'
       ..'"isScrambling":false},'
-    ..(NativeToDocumentPath(v.recFilePath) and '"recorded":"./'..JsonEscape(NativeToDocumentPath(v.recFilePath))..'",' or '')
+    ..(v.recFilePath~='' and '"recorded":"./'..JsonEscape(NativeToDocumentPath(v.recFilePath) or 'outside.ts')..'",' or '')
     ..'"channel":{'
       ..'"n":'..(v.onid*65536+v.tsid)..','
       ..'"type":"'..NetworkType(v.onid)..'",'
