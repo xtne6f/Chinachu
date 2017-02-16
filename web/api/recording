@@ -17,11 +17,11 @@ else
     recFilePath=edcb.GetRecFilePath(0+id)
     if recFilePath then
       code=410
-      f=io.open(edcb.Convert('cp932','utf-8',recFilePath),'rb')
+      f=edcb.io.open(recFilePath,'rb')
       if f then
         if cmd=='preview.jpg' then
           ct=''
-          ff=io.popen('readex -3200000 0 "'..edcb.Convert('cp932','utf-8',recFilePath)..'" | ffmpeg -f mpegts -i -'
+          ff=edcb.io.popen('readex -3200000 0 "'..recFilePath..'" | ffmpeg -f mpegts -i -'
                       ..' -frames:v 1 -c:v mjpeg -an -f image2 -s 480x270 -map 0:0 -','rb')
           if ff then
             ct=ff:read('*a')
@@ -40,8 +40,8 @@ else
             bv=(mg.get_var(mg.request_info.query_string,'b%3Av') or ''):match('^[0-9]+[kM]$'),
             ba=(mg.get_var(mg.request_info.query_string,'b%3Aa') or ''):match('^[0-9]+[kM]$')
           }
-          ff=io.popen((d.ss and '' or 'readex -1 4 "'..edcb.Convert('cp932','utf-8',recFilePath)..'" | ')
-                      ..'ffmpeg -f mpegts '..(d.ss and '-ss '..d.ss..' -i "'..edcb.Convert('cp932','utf-8',recFilePath)..'"' or '-i -')
+          ff=edcb.io.popen((d.ss and '' or 'readex -1 4 "'..recFilePath..'" | ')
+                      ..'ffmpeg -f mpegts '..(d.ss and '-ss '..d.ss..' -i "'..recFilePath..'"' or '-i -')
                       ..(d.t and ' -t '..d.t or '')..' -c:v vp9'..(d.s and ' -s '..d.s or '')..' -filter:v yadif'
                       ..(d.bv and ' -b:v '..d.bv..' -minrate:v '..d.bv..' -maxrate:v '..d.bv or '')
                       ..(d.ba and ' -b:a '..d.ba..' -minrate:a '..d.ba..' -maxrate:a '..d.ba or '')

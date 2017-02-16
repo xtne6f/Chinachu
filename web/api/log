@@ -4,7 +4,7 @@ code=404
 ct=''
 if mg.request_info.uri:match('/operator/stream.txt') then
   code=204
-  f=io.open(edcb.Convert('cp932','utf-8',edcb.GetPrivateProfile('SET','ModulePath','','Common.ini')..'\\EpgTimerSrvNotifyLog.txt'))
+  f=edcb.io.open(edcb.GetPrivateProfile('SET','ModulePath','','Common.ini')..'\\EpgTimerSrvNotifyLog.txt')
   if f then
     code=200
     ct=edcb.Convert('utf-8','cp932',f:read('*a'))

@@ -17,7 +17,7 @@ else
     r=edcb.GetRecFileInfo(0+id)
     if r then
       code=410
-      f=io.open(edcb.Convert('cp932','utf-8',r.recFilePath),'rb')
+      f=edcb.io.open(r.recFilePath,'rb')
       if f then
         if cmd=='file.json' then
           code=200
@@ -34,7 +34,7 @@ else
         elseif cmd=='preview.jpg' then
           ct=''
           pos=math.max((tonumber(mg.get_var(mg.request_info.query_string,'pos')) or 5)-1.5,0)
-          ff=io.popen('ffmpeg -f mpegts -ss '..pos..' -i "'..edcb.Convert('cp932','utf-8',r.recFilePath)
+          ff=edcb.io.popen('ffmpeg -f mpegts -ss '..pos..' -i "'..r.recFilePath
                       ..'" -frames:v 1 -c:v mjpeg -an -f image2 -s 480x270 -map 0:0 -','rb')
           if ff then
             ct=ff:read('*a')
@@ -58,7 +58,7 @@ else
           ibitrate=r.durationSecond~=0 and f:seek('end')/r.durationSecond or 0
           videoBitrate=d.bv and d.bv:sub(0,#d.bv-1)*1024*(d.bv:sub(-1)=='M' and 1024 or 1) or 0
           audioBitrate=d.ba and d.ba:sub(0,#d.ba-1)*1024*(d.ba:sub(-1)=='M' and 1024 or 1) or 0
-          ff=io.popen('readex '..math.floor(math.max(ibitrate*d.ss,0))..' 0 "'..edcb.Convert('cp932','utf-8',r.recFilePath)
+          ff=edcb.io.popen('readex '..math.floor(math.max(ibitrate*d.ss,0))..' 0 "'..r.recFilePath
                       ..'" | ffmpeg -f mpegts -i -'..(d.t and ' -t '..d.t or '')
                       ..' -c:v '..d.cv..' -c:a '..d.ca..(d.s and ' -s '..d.s or '')..' -filter:v yadif'
                       ..(d.bv and ' -b:v '..d.bv..' -minrate:v '..d.bv..' -maxrate:v '..d.bv..' -bufsize:v '..(videoBitrate*8) or '')
